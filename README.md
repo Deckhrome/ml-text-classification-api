@@ -1,4 +1,4 @@
-# ml-text-classification-api
+# ml-text-classification-ap
 Classify your text to see if it's a spam.
 
 ```

@@ -1,27 +1,56 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-# import model  # Assuming a model.py file exists with a predict function
-from model import TextClassificationModel
+from app.model import NBASurvivalModel
+from app.schemas import PlayerStatsRequest, PredictionResponse
 
-class Item(BaseModel):
-    text: str
+app = FastAPI(
+    title="NBA Player Investment API",
+    description="Predict if a rookie will last more than 5 years in NBA",
+    version="1.0"
+)
 
-
-app = FastAPI()
+model = None
 
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+def root():
+    return {"message": "NBA Investment Prediction API"}
 
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "healthy"}
 
-@app.post("/predict")
-def create_item(item: Item):
-    input_text = item.text
-    prediction = "positive" if "good" in input_text.lower() else "negative"
+@app.on_event("startup")
+def load_model():
+    global model
+    model = NBASurvivalModel(
+        model_path="app/models/svc_model.joblib",
+        scaler_path="app/models/scaler.joblib",
+        threshold_path="app/models/threshold.txt"
+    )
 
-    # label, confidence = model.predict(input_text)
+@app.post("/predict", response_model=PredictionResponse)
+def predict_player(request: PlayerStatsRequest):
 
-    return {"text": input_text, "predicted_label": prediction}
+    features = [
+        request.GP,
+        request.MIN,
+        request.PTS,
+        request.FGM,
+        request.FGA,
+        request.FG_pct,
+        request.FG3M,
+        request.FG3A,
+        request.FG3_pct,
+        request.FTM,
+        request.FTA,
+        request.FT_pct,
+        request.OREB,
+        request.DREB,
+        request.REB,
+        request.AST,
+        request.STL,
+        request.BLK,
+        request.TOV,
+    ]
+
+    result = model.predict(features)
+    return result
